@@ -8,9 +8,12 @@ import jade.core.behaviours.SequentialBehaviour;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
+import jade.proto.ContractNetInitiator;
+import jade.proto.ContractNetResponder;
 import jade.util.Logger;
 
 import java.util.ArrayList;
+import java.util.Vector;
 import java.util.logging.Level;
 
 /**
@@ -80,6 +83,38 @@ public class ProductAgent extends Agent {
             - public void action  -------- ???
      */
 
+    private class dealer extends ContractNetInitiator {
+
+        public dealer(Agent a, ACLMessage msg){
+            super(a, msg);
+        }
+
+        @Override
+        protected void handleInform(ACLMessage inform){
+            System.out.println(myAgent.getLocalName() + ": INFORM message received");
+        }
+
+        @Override
+        protected void handleAllResponses(Vector responses, Vector acceptances){
+            System.out.println(myAgent.getLocalName() + ": ALL PROPOSALS received");
+            ACLMessage auxMsg = (ACLMessage) responses.get(0);
+            ACLMessage reply = auxMsg.createReply();
+            reply.setPerformative(ACLMessage.ACCEPT_PROPOSAL);
+            acceptances.add(reply);
+        }
+    }
+
+
+
+
+    /*
+        behaviour - searchResourceInDF:
+            - Encarregado de procurar os recursos no DF. Apenas é executado uma vez (OneShotBehaviour)
+        methods:
+            - public searchResourceInDF -- constructor
+            - public void action  -------- ???
+     */
+
     private class searchResourceInDF extends OneShotBehaviour {
 
         //Construtor
@@ -88,21 +123,30 @@ public class ProductAgent extends Agent {
         }
 
         @Override
-        public void action()
-        {
-            DFAgentDescription[] dfd = null; //Lista de agentes
+        public void action() {
 
-            try
-            {
+            DFAgentDescription[] agents_list = null; //Lista de agentes
+
+            try {
                 System.out.println("Looking for available agents...");
-                dfd = DFInteraction.SearchInDFByName(executionPlan.get(plan_step),myAgent);
+                agents_list = DFInteraction.SearchInDFByName(executionPlan.get(plan_step),myAgent);
             } catch (FIPAException e) {
                 Logger.getLogger(ProductAgent.class.getName()).log(Level.SEVERE,null,e);
             }
 
-            if (dfd != null)
+            if (agents_list != null)
             {
+                ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
+                for(int i=0; i < agents_list.length; i++){
+                    msg.addReceiver(agents_list[i].getName());
+                    System.out.println("Msg  sent to:" + agents_list[i].getName().getLocalName());
+                }
 
+
+
+            } else{
+
+                System.out.println("RIP");
             }
 
 
