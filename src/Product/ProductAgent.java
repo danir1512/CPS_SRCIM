@@ -7,6 +7,7 @@ import jade.core.behaviours.OneShotBehaviour;
 import jade.core.behaviours.SequentialBehaviour;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAException;
+import jade.lang.acl.ACLMessage;
 import jade.util.Logger;
 
 import java.util.ArrayList;
@@ -101,7 +102,9 @@ public class ProductAgent extends Agent {
             if (dfd != null)
             {
                 System.out.println("Found some agent/s");
+                System.out.println("tua mae");
             }
+
 
 
         }
