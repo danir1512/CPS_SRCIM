@@ -9,7 +9,6 @@ import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAException;
 import jade.util.Logger;
 
-import java.io.SequenceInputStream;
 import java.util.ArrayList;
 import java.util.logging.Level;
 
@@ -22,18 +21,12 @@ public class ProductAgent extends Agent {
     String id;
     ArrayList<String> executionPlan = new ArrayList<>();
     // TO DO: Add remaining attributes required for your implementation
-
-    /************************************/
-
     int plan_step;
-
     String current_pos, next_pos;
     boolean recovery_tried, quality_check;
     AID bestResource, agv, ta; //AID -> agent identifier
     boolean request_agv;
-
     public boolean search_InDF_done = false;
-    /************************************/
 
     @Override
     protected void setup() {
@@ -52,12 +45,14 @@ public class ProductAgent extends Agent {
         this.recovery_tried = false;
         this.request_agv = false;
 
-        SequentialBehaviour sb = new SequentialBehaviour(); //SequentialBehaviour serve para encadear varios sub-behaviours que são executados de forma sequencial
+        //SequentialBehaviour encadeia vários sub-behaviours que são executados de forma sucessiva
+        SequentialBehaviour sb = new SequentialBehaviour();
 
         // 1 - Procurar Recursos no DF
 
         for(int i=0; i < executionPlan.size()-1; i++){
             sb.addSubBehaviour(new searchResourceInDF(this));
+            //sb.addSubBehaviour(new transport(this));
         }
         this.addBehaviour(sb);
     }
@@ -78,9 +73,7 @@ public class ProductAgent extends Agent {
 
     /*
         behaviour - searchResourceInDF:
-
-            - Encarregado de procurar os recursos no DF. Apenas é executado uma unica vez (OneShotBehaviour)
-
+            - Encarregado de procurar os recursos no DF. Apenas é executado uma vez (OneShotBehaviour)
         methods:
             - public searchResourceInDF -- constructor
             - public void action  -------- ???
@@ -96,12 +89,18 @@ public class ProductAgent extends Agent {
         @Override
         public void action() {
 
-            DFAgentDescription[] dfd = null; //lista de agentes
+            DFAgentDescription[] dfd = null; //Lista de agentes
 
             try {
+                System.out.println("Looking for available agents...");
                 dfd = DFInteraction.SearchInDFByName(executionPlan.get(plan_step),myAgent);
             } catch (FIPAException e) {
                 Logger.getLogger(ProductAgent.class.getName()).log(Level.SEVERE,null,e);
+            }
+
+            if (dfd != null)
+            {
+
             }
 
 
