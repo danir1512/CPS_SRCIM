@@ -5,6 +5,12 @@ import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import Libraries.IResource;
+import jade.domain.FIPAAgentManagement.FailureException;
+import jade.domain.FIPAAgentManagement.NotUnderstoodException;
+import jade.domain.FIPAAgentManagement.RefuseException;
+import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
+import jade.proto.ContractNetResponder;
 
 /**
  *
@@ -47,6 +53,32 @@ public class ResourceAgent extends Agent {
         // TO DO: Add responder behaviour/s
 
 
+    }
+
+    /*
+    * Contract Net Responder
+    * */
+    private class responder extends ContractNetResponder {
+
+        public responder (Agent a, MessageTemplate mt){
+            super(a, mt);
+        }
+
+        protected ACLMessage handleCfp (ACLMessage cfp) throws RefuseException, FailureException, NotUnderstoodException {
+            System.out.print(myAgent.getLocalName() + ": Processing CFP message");
+            ACLMessage msg = cfp.createReply();
+            msg.setPerformative(ACLMessage.PROPOSE);
+            msg.setContent("My Proposal value");
+            return msg;
+        }
+
+        protected ACLMessage handleAcceptProposal (ACLMessage cfp, ACLMessage propose, ACLMessage accept) throws FailureException {
+            System.out.println(myAgent.getLocalName() + ": Preparing result of CFP");
+            block(5000);
+            ACLMessage msg = cfp.createReply();
+            msg.setPerformative(ACLMessage.INFORM);
+            return msg;
+        }
     }
 
     @Override

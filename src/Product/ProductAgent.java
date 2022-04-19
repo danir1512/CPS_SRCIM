@@ -88,11 +88,12 @@ public class ProductAgent extends Agent {
         }
 
         @Override
-        public void action() {
-
+        public void action()
+        {
             DFAgentDescription[] dfd = null; //Lista de agentes
 
-            try {
+            try
+            {
                 System.out.println("Looking for available agents...");
                 dfd = DFInteraction.SearchInDFByName(executionPlan.get(plan_step),myAgent);
             } catch (FIPAException e) {
@@ -101,8 +102,7 @@ public class ProductAgent extends Agent {
 
             if (dfd != null)
             {
-                System.out.println("Found some agent/s");
-                System.out.println("tua mae");
+
             }
 
 
