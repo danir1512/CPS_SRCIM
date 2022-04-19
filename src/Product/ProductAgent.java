@@ -100,7 +100,7 @@ public class ProductAgent extends Agent {
 
             if (dfd != null)
             {
-
+                System.out.println("Found some agent/s");
             }
 
 
