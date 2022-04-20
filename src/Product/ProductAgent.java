@@ -124,7 +124,7 @@ public class ProductAgent extends Agent {
                 if(msg.getPerformative() == ACLMessage.PROPOSE){ //if th msg receive is a proposal
                     ACLMessage reply = msg.createReply();       //create reply for the proposal
                     reply.setPerformative(ACLMessage.REJECT_PROPOSAL); //set the default performative (type of communication act, e.x. reject or accept proposal, inform, request)
-                    acceptances.addElement(reply);
+                    acceptances.addElement(reply);                     //adicionamos
 
                     int proposal = Integer.parseInt(msg.getContent());
                     if(proposal > best_bet){
