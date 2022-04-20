@@ -1,16 +1,20 @@
 package Resource;
 
+import Utilities.DFInteraction;
 import jade.core.Agent;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import Libraries.IResource;
-import jade.domain.FIPAAgentManagement.FailureException;
-import jade.domain.FIPAAgentManagement.NotUnderstoodException;
-import jade.domain.FIPAAgentManagement.RefuseException;
+import jade.domain.DFService;
+import jade.domain.FIPAAgentManagement.*;
+import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
+import jade.proto.AchieveREResponder;
 import jade.proto.ContractNetResponder;
+
+import static Utilities.Constants.DFSERVICE_RESOURCE;
 
 /**
  *
@@ -47,20 +51,50 @@ public class ResourceAgent extends Agent {
         this.associatedSkills = myLib.getSkills();
         System.out.println("Resource Deployed: " + this.id + " Executes: " + Arrays.toString(associatedSkills));
 
-        //TO DO: Register in DF with the corresponding skills as services
-
-
+        // TO DO: Register in DF with the corresponding skills as services
+        try {
+            DFInteraction.RegisterInDF(this, associatedSkills, DFSERVICE_RESOURCE);
+        } catch (FIPAException e) {
+            e.printStackTrace();
+        }
         // TO DO: Add responder behaviour/s
+        this.addBehaviour(new responder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST)));
 
+    }
 
+    /*
+    * AchieveREResponder
+    * */
+    private class responder extends AchieveREResponder{
+
+        public responder(Agent a, MessageTemplate mt){
+            super(a, mt);
+        }
+
+        @Override
+        protected ACLMessage handleRequest(ACLMessage request) throws NotUnderstoodException, RefuseException{
+            System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST");
+            ACLMessage msg = request.createReply();
+            msg.setPerformative(ACLMessage.INFORM);
+            return msg;
+        }
+
+        @Override
+        protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response) throws FailureException{
+            System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST");
+
+            ACLMessage msg = request.createReply();
+            msg.setPerformative(ACLMessage.INFORM);
+            return msg;
+        }
     }
 
     /*
     * Contract Net Responder
     * */
-    private class responder extends ContractNetResponder {
+    private class contractResponder extends ContractNetResponder {
 
-        public responder (Agent a, MessageTemplate mt){
+        public contractResponder (Agent a, MessageTemplate mt){
             super(a, mt);
         }
 
