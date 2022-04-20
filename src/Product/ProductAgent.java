@@ -177,7 +177,7 @@ public class ProductAgent extends Agent {
         public void action() {
 
             DFAgentDescription[] agents_list = null; //Lista de agentes
-
+            //O henriques é burro
             try {
                 System.out.println("Looking for available agents...");
                 agents_list = DFInteraction.SearchInDFByName(executionPlan.get(plan_step),myAgent);
