@@ -40,8 +40,7 @@ public class TransportAgent extends Agent {
         System.out.println("Transport Deployed: " + this.id + " Executes: " + Arrays.toString(associatedSkills));
 
         // TO DO: Register in DF
-        // TO DO: Add responder behaviour/s
-        //sverjs
+        // TO DO: Add responder behaviour/
 
     }
 

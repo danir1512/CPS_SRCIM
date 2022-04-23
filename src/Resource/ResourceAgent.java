@@ -15,6 +15,7 @@ import jade.proto.AchieveREResponder;
 import jade.proto.ContractNetResponder;
 
 import static Utilities.Constants.DFSERVICE_RESOURCE;
+import static Utilities.Constants.ONTOLOGY_EXECUTE_SKILL;
 
 /**
  *
@@ -27,12 +28,14 @@ public class ResourceAgent extends Agent {
     String description;
     String[] associatedSkills;
     String location;
+    Boolean available;
 
     @Override
     protected void setup() {
         Object[] args = this.getArguments();
         this.id = (String) args[0];
         this.description = (String) args[1];
+        this.available = true;
 
         //Load hw lib
         try {
@@ -57,59 +60,70 @@ public class ResourceAgent extends Agent {
         } catch (FIPAException e) {
             e.printStackTrace();
         }
+
         // TO DO: Add responder behaviour/s
-        this.addBehaviour(new responder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST)));
-
+        this.addBehaviour(new contractNetResponder(this, MessageTemplate.MatchPerformative(ACLMessage.CFP)));
+        this.addBehaviour(new fipaResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST)));
     }
 
     /*
-    * AchieveREResponder
-    * */
-    private class responder extends AchieveREResponder{
+     * Contract Net Responder
+     * */
+    private class contractNetResponder extends ContractNetResponder {
 
-        public responder(Agent a, MessageTemplate mt){
-            super(a, mt);
-        }
-
-        @Override
-        protected ACLMessage handleRequest(ACLMessage request) throws NotUnderstoodException, RefuseException{
-            System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST");
-            ACLMessage msg = request.createReply();
-            msg.setPerformative(ACLMessage.INFORM);
-            return msg;
-        }
-
-        @Override
-        protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response) throws FailureException{
-            System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST");
-
-            ACLMessage msg = request.createReply();
-            msg.setPerformative(ACLMessage.INFORM);
-            return msg;
-        }
-    }
-
-    /*
-    * Contract Net Responder
-    * */
-    private class contractResponder extends ContractNetResponder {
-
-        public contractResponder (Agent a, MessageTemplate mt){
+        public contractNetResponder (Agent a, MessageTemplate mt){
             super(a, mt);
         }
 
         protected ACLMessage handleCfp (ACLMessage cfp) throws RefuseException, FailureException, NotUnderstoodException {
             System.out.print(myAgent.getLocalName() + ": Processing CFP message");
             ACLMessage msg = cfp.createReply();
-            msg.setPerformative(ACLMessage.PROPOSE);
-            msg.setContent("My Proposal value");
+
+            if(available) {
+                msg.setPerformative(ACLMessage.PROPOSE);
+                System.out.println("PROPOSE sent to " + cfp.getSender().getLocalName() + "from" + myAgent.getLocalName());
+            }
+            else {
+                msg.setPerformative(ACLMessage.REFUSE);
+                System.out.println("REFUSE sent to " + cfp.getSender().getLocalName() + "from" + myAgent.getLocalName());
+            }
+
             return msg;
         }
 
         protected ACLMessage handleAcceptProposal (ACLMessage cfp, ACLMessage propose, ACLMessage accept) throws FailureException {
             System.out.println(myAgent.getLocalName() + ": Preparing result of CFP");
-            block(5000);
+            block(5000); //Perguntar ao prof para que serve
             ACLMessage msg = cfp.createReply();
+            msg.setPerformative(ACLMessage.INFORM);
+            msg.setContent(location);
+            available = false;
+            return msg;
+        }
+    }
+
+    /*
+    * AchieveREResponder
+    * */
+    private class fipaResponder extends AchieveREResponder {
+
+        public fipaResponder(Agent a, MessageTemplate mt){
+            super(a, mt);
+        }
+
+        @Override
+        protected ACLMessage handleRequest(ACLMessage request) throws NotUnderstoodException, RefuseException {
+            System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST");
+            ACLMessage msg = request.createReply();
+            msg.setPerformative(ACLMessage.AGREE);
+            return msg;
+        }
+
+        @Override
+        protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response) throws FailureException {
+            System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST");
+
+            ACLMessage msg = request.createReply();
             msg.setPerformative(ACLMessage.INFORM);
             return msg;
         }
