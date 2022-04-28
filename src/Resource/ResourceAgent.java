@@ -71,7 +71,7 @@ public class ResourceAgent extends Agent {
      * */
     private class contractNetResponder extends ContractNetResponder {
 
-        public contractNetResponder (Agent a, MessageTemplate mt){
+        public contractNetResponder (Agent a, MessageTemplate mt) {
             super(a, mt);
         }
 
@@ -93,7 +93,6 @@ public class ResourceAgent extends Agent {
 
         protected ACLMessage handleAcceptProposal (ACLMessage cfp, ACLMessage propose, ACLMessage accept) throws FailureException {
             System.out.println(myAgent.getLocalName() + ": Preparing result of CFP");
-            block(5000); //Perguntar ao prof para que serve
             ACLMessage msg = cfp.createReply();
             msg.setPerformative(ACLMessage.INFORM);
             msg.setContent(location);
@@ -107,7 +106,7 @@ public class ResourceAgent extends Agent {
     * */
     private class fipaResponder extends AchieveREResponder {
 
-        public fipaResponder(Agent a, MessageTemplate mt){
+        public fipaResponder(Agent a, MessageTemplate mt) {
             super(a, mt);
         }
 
@@ -122,7 +121,7 @@ public class ResourceAgent extends Agent {
         @Override
         protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response) throws FailureException {
             System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST");
-
+            myLib.executeSkill(request.getOntology());
             ACLMessage msg = request.createReply();
             msg.setPerformative(ACLMessage.INFORM);
             return msg;
