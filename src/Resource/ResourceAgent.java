@@ -128,6 +128,7 @@ public class ResourceAgent extends Agent {
             myLib.executeSkill(request.getContent());
             ACLMessage msg = request.createReply();
             msg.setPerformative(ACLMessage.INFORM);
+            available = true;
             return msg;
         }
     }

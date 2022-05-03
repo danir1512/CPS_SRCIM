@@ -26,13 +26,13 @@ public class TransportAgent extends Agent {
     String description;
     String[] associatedSkills;
 
-    boolean isAvailable;
+    boolean available;
     @Override
     protected void setup() {
         Object[] args = this.getArguments();
         this.id = (String) args[0];
         this.description = (String) args[1];
-        this.isAvailable = true;
+        this.available = true;
 
         //Load hw lib
         try {
@@ -71,16 +71,16 @@ public class TransportAgent extends Agent {
         }
 
         protected ACLMessage handleRequest(ACLMessage request) throws NotUnderstoodException, RefuseException{
-            System.out.println(myAgent.getLocalName() + "(TA): Received Transportation Request from: " + request.getSender().getLocalName());
+            System.out.println(myAgent.getLocalName() + "(TA) received Transportation Request from: " + request.getSender().getLocalName());
             ACLMessage msg = request.createReply();
 
-            if(isAvailable){
+            if(available){
                 productLocations = request.getContent().split(Constants.TOKEN);
                 msg.setPerformative(ACLMessage.AGREE);
-                isAvailable = false;
+                available = false;
             } else {
                 msg.setPerformative(ACLMessage.REFUSE);
-                System.out.println(myAgent.getLocalName() + "(TA): sent REFUSE to: " + request.getSender().getLocalName());
+                System.out.println(myAgent.getLocalName() + "(TA) sent REFUSE to: " + request.getSender().getLocalName());
             }
 
             return msg;
@@ -88,15 +88,14 @@ public class TransportAgent extends Agent {
 
         protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response) {
             System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST");
-            myLib.executeMove(productLocations[0],productLocations[1],request.getConversationId());
+            myLib.executeMove(productLocations[0], productLocations[1], request.getConversationId());
 
             ACLMessage msg = request.createReply();
             msg.setPerformative(ACLMessage.INFORM);
-            msg.setOntology(Constants.ONTOLOGY_MOVE);
             msg.setContent(productLocations[1]);
 
-            System.out.println(myAgent.getLocalName() + " (TA): Performed MOVE operation to: " + request.getSender().getLocalName());
-            isAvailable = true;
+            System.out.println(myAgent.getLocalName() + " (TA): Performed MOVE operation to " + request.getSender().getLocalName());
+            available = true;
             return msg;
         }
 
