@@ -373,4 +373,61 @@ public class ProductAgent extends Agent {
             return this.finished;
         }
     }
+
+    /**
+     * behaviour - finishing_step
+     */
+
+    private class finishing_step extends SimpleBehaviour {
+
+        private boolean finished = false;
+
+        public finishing_step(Agent a){
+            super(a);
+        }
+
+        @Override
+        public void action() {
+            if(skill_done){
+                System.out.println(myAgent.getLocalName() + " finished execution number: "+plan_step+" step: " + executionPlan.get(plan_step) + "\n");
+                if(executionPlan.get(plan_step).equals("sk_drop")){ //
+                    System.out.println("The manufacture of " + myAgent.getLocalName()  +" has been completed with SUCCESS!");
+                }
+                skill_done = false;
+                plan_step++;
+
+                if(quality_check == false && recovery_tried == false && plan_step==4){  //caso não estajamos
+                    System.out.println("Recovery Initiated");
+                    quality_check = true;
+                    recovery_tried = true;
+                    plan_step = 1;
+
+                    SequentialBehaviour sb2 = new SequentialBehaviour();
+                    for(int i=1; i< executionPlan.size() -1; i++){
+                        sb2.addSubBehaviour(new searchResourceInDF(this.myAgent));
+                        sb2.addSubBehaviour(new transport(this.getAgent()));
+                        sb2.addSubBehaviour(new execute_skill(this.getAgent()));
+                        sb2.addSubBehaviour(new finishing_step(this.getAgent()));
+                    }
+                    addBehaviour(sb2);
+                }
+                else if(plan_step==4){
+                    SequentialBehaviour sb3 = new SequentialBehaviour();
+                    sb3.addSubBehaviour(new searchResourceInDF(this.getAgent()));
+                    sb3.addSubBehaviour(new transport(this.getAgent()));
+                    sb3.addSubBehaviour(new execute_skill(this.getAgent()));
+                    sb3.addSubBehaviour(new finishing_step(this.getAgent()));
+                    addBehaviour(sb3);
+                }
+
+                this.finished = true;
+
+            }
+        }
+
+        @Override
+        public boolean done() {
+            return this.finished;
+        }
+    }
 }
