@@ -3,10 +3,10 @@ package Resource;
 import Utilities.DFInteraction;
 import jade.core.Agent;
 import java.util.Arrays;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import Libraries.IResource;
-import jade.domain.DFService;
 import jade.domain.FIPAAgentManagement.*;
 import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
@@ -15,7 +15,7 @@ import jade.proto.AchieveREResponder;
 import jade.proto.ContractNetResponder;
 
 import static Utilities.Constants.DFSERVICE_RESOURCE;
-import static Utilities.Constants.ONTOLOGY_EXECUTE_SKILL;
+import static Utilities.Constants.ONTOLOGY_NEGOTIATE_RESOURCE;
 
 /**
  *
@@ -40,7 +40,7 @@ public class ResourceAgent extends Agent {
         //Load hw lib
         try {
             String className = "Libraries." + (String) args[2];
-            Class cls = Class.forName(className);
+            Class<?> cls = Class.forName(className);
             Object instance;
             instance = cls.newInstance();
             myLib = (IResource) instance;
@@ -81,12 +81,16 @@ public class ResourceAgent extends Agent {
 
             if(available) {
                 msg.setPerformative(ACLMessage.PROPOSE);
+                Random random = new Random();
+                msg.setContent(random.toString());
                 System.out.println("PROPOSE sent to " + cfp.getSender().getLocalName() + "from" + myAgent.getLocalName());
             }
             else {
                 msg.setPerformative(ACLMessage.REFUSE);
                 System.out.println("REFUSE sent to " + cfp.getSender().getLocalName() + "from" + myAgent.getLocalName());
             }
+
+            msg.setOntology(ONTOLOGY_NEGOTIATE_RESOURCE);
 
             return msg;
         }
@@ -97,6 +101,7 @@ public class ResourceAgent extends Agent {
             msg.setPerformative(ACLMessage.INFORM);
             msg.setContent(location);
             available = false;
+
             return msg;
         }
     }
@@ -121,7 +126,7 @@ public class ResourceAgent extends Agent {
         @Override
         protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response) throws FailureException {
             System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST");
-            myLib.executeSkill(request.getOntology());
+            myLib.executeSkill(request.getContent());
             ACLMessage msg = request.createReply();
             msg.setPerformative(ACLMessage.INFORM);
             return msg;
