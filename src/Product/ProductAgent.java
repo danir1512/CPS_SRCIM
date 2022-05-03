@@ -58,7 +58,9 @@ public class ProductAgent extends Agent {
 
         for (int i = 0; i < executionPlan.size() - 1; i++) {
             sb.addSubBehaviour(new searchResourceInDF(this));
-            //sb.addSubBehaviour(new transport(this));
+            sb.addSubBehaviour(new transport(this));
+            sb.addSubBehaviour(new execute_skill(this));
+            sb.addSubBehaviour(new finishing_step(this));
         }
         this.addBehaviour(sb);
     }
