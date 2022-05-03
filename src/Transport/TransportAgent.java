@@ -1,10 +1,17 @@
 package Transport;
 
+import Utilities.DFInteraction;
 import jade.core.Agent;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import Libraries.ITransport;
+import jade.domain.FIPAAgentManagement.NotUnderstoodException;
+import jade.domain.FIPAAgentManagement.RefuseException;
+import jade.domain.FIPAException;
+import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
+import jade.proto.AchieveREResponder;
 
 /**
  *
@@ -40,7 +47,34 @@ public class TransportAgent extends Agent {
         System.out.println("Transport Deployed: " + this.id + " Executes: " + Arrays.toString(associatedSkills));
 
         // TO DO: Register in DF
-        // TO DO: Add responder behaviour/
+        try {
+            DFInteraction.RegisterInDF(this, associatedSkills, description);
+        } catch (FIPAException e) {
+            e.printStackTrace();
+        }
+
+        // TO DO: Add responder behaviour/s
+
+
+    }
+
+    private class TransportResponder extends AchieveREResponder{
+
+        public TransportResponder(Agent a, MessageTemplate mt) {
+            super(a, mt);
+        }
+
+        protected ACLMessage handleRequest(ACLMessage request) throws NotUnderstoodException, RefuseException{
+            System.out.println(myAgent.getLocalName() + ": Processing REQUEST");
+            ACLMessage msg = request.createReply();
+            msg.setPerformative(ACLMessage.AGREE);
+            return msg;
+        }
+
+        protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response) {
+            System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST");
+
+        }
 
     }
 
