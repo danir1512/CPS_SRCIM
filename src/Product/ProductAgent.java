@@ -82,6 +82,46 @@ public class ProductAgent extends Agent {
         };
     }
 
+
+    /**
+     * behaviour - searchResourceInDF:
+     * - Encarregado de procurar os recursos no DF. Apenas é executado uma vez (OneShotBehaviour) methods:
+     * - public searchResourceInDF -- constructor
+     * - public void action  -------- ???
+     */
+
+    private class searchResourceInDF extends OneShotBehaviour {
+
+        //Construtor
+        public searchResourceInDF(Agent a) {
+            super(a);
+        }
+
+        @Override
+        public void action() {
+            DFAgentDescription[] agents_list = null; //Lista de agentes
+
+            try {
+                System.out.println("Looking for available agents...");
+                agents_list = DFInteraction.SearchInDFByName(executionPlan.get(plan_step), myAgent);
+            } catch (FIPAException e) {
+                Logger.getLogger(ProductAgent.class.getName()).log(Level.SEVERE, null, e);
+            }
+
+            if (agents_list != null) {
+                ACLMessage msg = new ACLMessage(ACLMessage.CFP);
+                for (int i = 0; i < agents_list.length; i++) {
+                    msg.addReceiver(agents_list[i].getName());
+                    System.out.println("Msg sent to: " + agents_list[i].getName().getLocalName());
+                }
+                myAgent.addBehaviour(new initiator(myAgent, msg));
+            } else {
+                System.out.println("RIP - Resource not found: " + executionPlan.get(plan_step));
+            }
+
+        }
+    }
+
     /**
      * behaviour - initiator ContractNetInitiator:
      * - Encarregado de começar as negociações com os RA
@@ -96,7 +136,6 @@ public class ProductAgent extends Agent {
         private final ACLMessage msg;
 
         public initiator(Agent a, ACLMessage msg) {
-
             super(a, msg);
             this.msg = msg;
         }
@@ -137,55 +176,24 @@ public class ProductAgent extends Agent {
                 } else {
                     System.out.println("(CFP) REFUSE received from: " + msg.getSender().getLocalName());
                 }
-                //Acept best proposal
+                //Accept best proposal
                 if (accept != null) {
                     System.out.println("Accepting proposal " + bestProposal + " from responder " + bestProposer.getLocalName());
                     accept.setPerformative(ACLMessage.ACCEPT_PROPOSAL);
 
                     bestResource = bestProposer;
                 }
-
-                myAgent.addBehaviour(new initiator(myAgent, this.msg));
-            }
-        }
-    }
-
-    /**
-     * behaviour - searchResourceInDF:
-     * - Encarregado de procurar os recursos no DF. Apenas é executado uma vez (OneShotBehaviour) methods:
-     * - public searchResourceInDF -- constructor
-     * - public void action  -------- ???
-     */
-
-    private class searchResourceInDF extends OneShotBehaviour {
-
-        //Construtor
-        public searchResourceInDF(Agent a) {
-            super(a);
-        }
-
-        @Override
-        public void action() {
-            DFAgentDescription[] agents_list = null; //Lista de agentes
-
-            try {
-                System.out.println("Looking for available agents...");
-                agents_list = DFInteraction.SearchInDFByName(executionPlan.get(plan_step), myAgent);
-            } catch (FIPAException e) {
-                Logger.getLogger(ProductAgent.class.getName()).log(Level.SEVERE, null, e);
-            }
-
-            if (agents_list != null) {
-                ACLMessage msg = new ACLMessage(ACLMessage.CFP);
-                for (int i = 0; i < agents_list.length; i++) {
-                    msg.addReceiver(agents_list[i].getName());
-                    System.out.println("Msg  sent to:" + agents_list[i].getName().getLocalName());
+                else {
+                    try {
+                        Thread.sleep(5000);
+                        myAgent.addBehaviour(new initiator(myAgent, this.msg));
+                    } catch (InterruptedException ex) {
+                        ex.printStackTrace();
+                    }
                 }
-                myAgent.addBehaviour(new initiator(myAgent, msg));
-            } else {
-                System.out.println("RIP - Resource not found: " + executionPlan.get(plan_step));
-            }
 
+                //myAgent.addBehaviour(new initiator(myAgent, this.msg));
+            }
         }
     }
 

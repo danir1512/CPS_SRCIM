@@ -76,18 +76,17 @@ public class ResourceAgent extends Agent {
         }
 
         protected ACLMessage handleCfp (ACLMessage cfp) throws RefuseException, FailureException, NotUnderstoodException {
-            System.out.print(myAgent.getLocalName() + ": Processing CFP message");
+            System.out.println(myAgent.getLocalName() + ": Processing CFP message.");
             ACLMessage msg = cfp.createReply();
 
             if(available) {
                 msg.setPerformative(ACLMessage.PROPOSE);
-                Random random = new Random();
-                msg.setContent(random.toString());
-                System.out.println("PROPOSE sent to " + cfp.getSender().getLocalName() + "from" + myAgent.getLocalName());
+                msg.setContent(Integer.toString(((int) (Math.random() * 100))));
+                System.out.println("PROPOSE sent to " + cfp.getSender().getLocalName() + " from " + myAgent.getLocalName());
             }
             else {
                 msg.setPerformative(ACLMessage.REFUSE);
-                System.out.println("REFUSE sent to " + cfp.getSender().getLocalName() + "from" + myAgent.getLocalName());
+                System.out.println("REFUSE sent to " + cfp.getSender().getLocalName() + " from " + myAgent.getLocalName());
             }
 
             msg.setOntology(ONTOLOGY_NEGOTIATE_RESOURCE);
@@ -96,7 +95,7 @@ public class ResourceAgent extends Agent {
         }
 
         protected ACLMessage handleAcceptProposal (ACLMessage cfp, ACLMessage propose, ACLMessage accept) throws FailureException {
-            System.out.println(myAgent.getLocalName() + ": Preparing result of CFP");
+            System.out.println(myAgent.getLocalName() + ": Proposal accepted.");
             ACLMessage msg = cfp.createReply();
             msg.setPerformative(ACLMessage.INFORM);
             msg.setContent(location);

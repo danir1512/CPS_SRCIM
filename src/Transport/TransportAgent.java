@@ -32,7 +32,7 @@ public class TransportAgent extends Agent {
         Object[] args = this.getArguments();
         this.id = (String) args[0];
         this.description = (String) args[1];
-        this.isAvailable = false;
+        this.isAvailable = true;
 
         //Load hw lib
         try {
@@ -88,7 +88,7 @@ public class TransportAgent extends Agent {
 
         protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response) {
             System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST");
-            myLib.executeMove(productLocations[0], productLocations[1],request.getConversationId());
+            myLib.executeMove(productLocations[0],productLocations[1],request.getConversationId());
 
             ACLMessage msg = request.createReply();
             msg.setPerformative(ACLMessage.INFORM);
