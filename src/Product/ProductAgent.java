@@ -1,10 +1,13 @@
 package Product;
 
+import Libraries.SimTransportLibrary;
+import Utilities.Constants;
 import Utilities.DFInteraction;
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.OneShotBehaviour;
 import jade.core.behaviours.SequentialBehaviour;
+import jade.core.behaviours.SimpleBehaviour;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
@@ -29,7 +32,7 @@ public class ProductAgent extends Agent {
     String current_pos, next_pos;
     boolean recovery_tried, quality_check;
     AID bestResource, agv, ta; //AID -> agent identifier
-    boolean request_agv, ra_negotiation_done, transport_done;
+    boolean request_agv, ra_negotiation_done, transport_done, skill_done;
 
     @Override
     protected void setup() {
@@ -47,7 +50,7 @@ public class ProductAgent extends Agent {
         this.quality_check = true;
         this.recovery_tried = false;
         this.request_agv = false;
-
+        this.skill_done = false;
         //SequentialBehaviour encadeia vários sub-behaviours que são executados de forma sucessiva
         SequentialBehaviour sb = new SequentialBehaviour();
 
@@ -186,19 +189,19 @@ public class ProductAgent extends Agent {
 
     /**
      *
-     * behaviour - comStart
-     * - Inicia as comunicação entre os agentes
+     * behaviour - comStart_ta
+     * - Inicia as comunicação entre os ta agentes (FIPA request initiator ta)
      * - protected void handleAgree
      * - protected handleInform
      * - protected handleRefuse
      *
      */
 
-    private class comStart extends AchieveREInitiator {
+    private class comStart_ta extends AchieveREInitiator {
 
         private final ACLMessage msg;
 
-        public comStart(Agent a, ACLMessage msg) {
+        public comStart_ta(Agent a, ACLMessage msg) {
             super(a, msg);
             this.msg = msg;
         }
@@ -218,7 +221,156 @@ public class ProductAgent extends Agent {
 
         @Override
         protected void handleRefuse(ACLMessage refuse) {
+            //falta adicionar coisas para quando o transporte é recusado
+            //nomeadamente se já estiver ocupado noutro transporte
+        }
+    }
 
+    /**
+     *
+     * behaviour - search_ta_in_DF
+     * - search for an transport agent in the DF and start a communication with it
+     */
+
+    private class search_ta_in_df extends OneShotBehaviour {
+
+        public search_ta_in_df(Agent a) {
+            super(a);
+        }
+
+        @Override
+        public void action(){
+
+            DFAgentDescription[] available_agents = null;
+
+
+            try {
+                System.out.println("Looking for an Uber...");
+                available_agents = DFInteraction.SearchInDFByName("sk_move", myAgent); //Searching for agents by name "sk_move", meaning, agents capable of transporting
+            } catch (FIPAException e) {
+                Logger.getLogger(ProductAgent.class.getName()).log(Level.SEVERE, null, e);
+            }
+
+            if (available_agents != null){
+
+                System.out.println("TA Agent " + myAgent.getLocalName() + " was found :" + available_agents.length);
+
+                ACLMessage req = new ACLMessage(ACLMessage.REQUEST); //Creating a request message
+
+                req.setContent(current_pos + Constants.TOKEN + next_pos); // we send the current and next position. The TOKEN allows us to send more than one parameter through  the request
+                req.setOntology(Constants.ONTOLOGY_MOVE); //Set the ontology of the req
+
+                ta = available_agents[0].getName(); //we gte the first agent
+                req.addReceiver(ta); //Add the receiver to the request
+
+                req.getAllReceiver().next().toString();
+
+                System.out.println(myAgent.getLocalName() + ": requested " + available_agents[0].getName().getLocalName());
+
+                myAgent.addBehaviour(new comStart_ta(myAgent, req)); //start communication with agent
+            }
+
+            else {
+                System.out.println(myAgent.getLocalName() + "Couldn't find an Uber (TA)");
+            }
+        }
+
+    }
+
+    /**
+     * behaviour - transport
+     * - initialize the request of the transport
+     */
+
+    private class transport extends SimpleBehaviour {
+
+        private boolean finished;
+
+        private transport(Agent a){
+            super(a);
+            finished = false;
+        }
+
+        @Override
+        public void action() {
+            if(ra_negotiation_done){ // once the negotiation is over, search for ta in the df
+                if (request_agv) {
+                    myAgent.addBehaviour(new search_ta_in_df(myAgent));
+                    request_agv = false;
+                }
+                else {
+                    transport_done = true;
+                }
+
+                ra_negotiation_done = false;
+                this.finished = true;
+            }
+        }
+
+        @Override
+        public boolean done() {
+            return false;
+        }
+    }
+
+    /**
+     * behaviour - comStart_ra
+     * - Inicia as comunicações entre os ra agentes (FIPA request initiator ta)
+     */
+
+    private class comStart_ra extends AchieveREInitiator{
+
+        public comStart_ra(Agent a, ACLMessage request){
+            super(a,request);
+        }
+
+        @Override
+        protected void handleAgree(ACLMessage agree) {
+            System.out.println("Agent " + myAgent.getLocalName() + ": AGREE msg received from: " + agree.getSender().getLocalName());
+        }
+
+        @Override
+        protected void handleInform(ACLMessage inform) {
+            System.out.println(myAgent.getLocalName() + ": Inform message received from: " + inform.getSender().getLocalName());
+
+            if(inform.getContent().equalsIgnoreCase("QualityFail")){
+                quality_check = false;
+            }
+            skill_done = true;
+        }
+    }
+
+    /**
+     * behaviour - execute_skill
+     */
+
+    private class execute_skill extends SimpleBehaviour {
+
+        private boolean finished;
+
+        public execute_skill(Agent a){
+            super(a);
+            this.finished = false;
+        }
+
+        @Override
+        public void action() {
+            if(transport_done) {
+                ACLMessage req = new ACLMessage(ACLMessage.REQUEST);
+
+                req.setContent(executionPlan.get(plan_step));
+                req.addReceiver(bestResource);
+
+                myAgent.addBehaviour(new comStart_ra(myAgent, req));
+
+                transport_done = false;
+                this.finished = true;
+            }
+        }
+
+        @Override
+        public boolean done() {
+            return this.finished;
         }
     }
 }
