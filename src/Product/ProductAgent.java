@@ -31,7 +31,7 @@ public class ProductAgent extends Agent {
     int plan_step;
     String current_pos, next_pos;
     boolean recovery_tried, quality_check;
-    AID bestResource, agv, ta; //AID -> agent identifier
+    AID bestResource, ta; //AID -> agent identifier
     boolean request_agv, ra_negotiation_done, transport_done, skill_done;
 
     /*

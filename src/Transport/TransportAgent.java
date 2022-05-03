@@ -2,6 +2,7 @@ package Transport;
 
 import Utilities.Constants;
 import Utilities.DFInteraction;
+import Resource.ResourceAgent;
 import jade.core.Agent;
 import java.util.Arrays;
 import java.util.logging.Level;
@@ -25,11 +26,13 @@ public class TransportAgent extends Agent {
     String description;
     String[] associatedSkills;
 
+    boolean isAvailable;
     @Override
     protected void setup() {
         Object[] args = this.getArguments();
         this.id = (String) args[0];
         this.description = (String) args[1];
+        this.isAvailable = false;
 
         //Load hw lib
         try {
@@ -49,9 +52,9 @@ public class TransportAgent extends Agent {
 
         // TO DO: Register in DF
         try {
-            DFInteraction.RegisterInDF(this, associatedSkills, description);
+            DFInteraction.RegisterInDF(this, this.associatedSkills, this.description);
         } catch (FIPAException e) {
-            e.printStackTrace();
+            Logger.getLogger(ResourceAgent.class.getName()).log(Level.SEVERE, null, e);
         }
 
         // TO DO: Add responder behaviour/s
@@ -68,11 +71,17 @@ public class TransportAgent extends Agent {
         }
 
         protected ACLMessage handleRequest(ACLMessage request) throws NotUnderstoodException, RefuseException{
-            System.out.println(myAgent.getLocalName() + ": Processing REQUEST");
+            System.out.println(myAgent.getLocalName() + "(TA): Received Transportation Request from: " + request.getSender().getLocalName());
             ACLMessage msg = request.createReply();
-            msg.setPerformative(ACLMessage.AGREE);
 
-            productLocations = request.getContent().split(Constants.TOKEN);
+            if(isAvailable){
+                productLocations = request.getContent().split(Constants.TOKEN);
+                msg.setPerformative(ACLMessage.AGREE);
+                isAvailable = false;
+            } else {
+                msg.setPerformative(ACLMessage.REFUSE);
+                System.out.println(myAgent.getLocalName() + "(TA): sent REFUSE to: " + request.getSender().getLocalName());
+            }
 
             return msg;
         }
@@ -83,8 +92,11 @@ public class TransportAgent extends Agent {
 
             ACLMessage msg = request.createReply();
             msg.setPerformative(ACLMessage.INFORM);
+            msg.setOntology(Constants.ONTOLOGY_MOVE);
             msg.setContent(productLocations[1]);
 
+            System.out.println(myAgent.getLocalName() + " (TA): Performed MOVE operation to: " + request.getSender().getLocalName());
+            isAvailable = true;
             return msg;
         }
 
