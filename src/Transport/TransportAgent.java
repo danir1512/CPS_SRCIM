@@ -1,5 +1,6 @@
 package Transport;
 
+import Utilities.Constants;
 import Utilities.DFInteraction;
 import jade.core.Agent;
 import java.util.Arrays;
@@ -54,11 +55,13 @@ public class TransportAgent extends Agent {
         }
 
         // TO DO: Add responder behaviour/s
-
+        this.addBehaviour(new TransportResponder(this, MessageTemplate.MatchPerformative(ACLMessage.REQUEST)));
 
     }
 
     private class TransportResponder extends AchieveREResponder{
+
+        String[] productLocations;
 
         public TransportResponder(Agent a, MessageTemplate mt) {
             super(a, mt);
@@ -68,12 +71,21 @@ public class TransportAgent extends Agent {
             System.out.println(myAgent.getLocalName() + ": Processing REQUEST");
             ACLMessage msg = request.createReply();
             msg.setPerformative(ACLMessage.AGREE);
+
+            productLocations = request.getContent().split(Constants.TOKEN);
+
             return msg;
         }
 
         protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response) {
             System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST");
+            myLib.executeMove(productLocations[0], productLocations[1],request.getConversationId());
 
+            ACLMessage msg = request.createReply();
+            msg.setPerformative(ACLMessage.INFORM);
+            msg.setContent(productLocations[1]);
+
+            return msg;
         }
 
     }
