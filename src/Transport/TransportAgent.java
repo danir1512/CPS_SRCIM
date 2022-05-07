@@ -71,7 +71,7 @@ public class TransportAgent extends Agent {
         }
 
         protected ACLMessage handleRequest(ACLMessage request) throws NotUnderstoodException, RefuseException{
-            System.out.println(myAgent.getLocalName() + "(TA) received Transportation Request from: " + request.getSender().getLocalName());
+            System.out.println(myAgent.getLocalName() + ": Received transportation request from " + request.getSender().getLocalName());
             ACLMessage msg = request.createReply();
 
             if(available){
@@ -80,21 +80,21 @@ public class TransportAgent extends Agent {
                 available = false;
             } else {
                 msg.setPerformative(ACLMessage.REFUSE);
-                System.out.println(myAgent.getLocalName() + "(TA) sent REFUSE to: " + request.getSender().getLocalName());
+                System.out.println(myAgent.getLocalName() + ": sent REFUSE to: " + request.getSender().getLocalName());
             }
 
             return msg;
         }
 
         protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response) {
-            System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST");
+            System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST. Starting to make MOVE task.");
             myLib.executeMove(productLocations[0], productLocations[1], request.getConversationId());
 
             ACLMessage msg = request.createReply();
             msg.setPerformative(ACLMessage.INFORM);
             msg.setContent(productLocations[1]);
 
-            System.out.println(myAgent.getLocalName() + " (TA): Performed MOVE operation to " + request.getSender().getLocalName());
+            System.out.println(myAgent.getLocalName() + ": Performed MOVE operation for " + request.getSender().getLocalName());
             available = true;
             return msg;
         }

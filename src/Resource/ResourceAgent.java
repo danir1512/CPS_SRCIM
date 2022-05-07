@@ -82,11 +82,11 @@ public class ResourceAgent extends Agent {
             if(available) {
                 msg.setPerformative(ACLMessage.PROPOSE);
                 msg.setContent(Integer.toString(((int) (Math.random() * 100))));
-                System.out.println("PROPOSE sent to " + cfp.getSender().getLocalName() + " from " + myAgent.getLocalName());
+                System.out.println(myAgent.getLocalName() + ": PROPOSE sent to " + cfp.getSender().getLocalName());
             }
             else {
                 msg.setPerformative(ACLMessage.REFUSE);
-                System.out.println("REFUSE sent to " + cfp.getSender().getLocalName() + " from " + myAgent.getLocalName());
+                System.out.println(myAgent.getLocalName() + "REFUSE sent to " + cfp.getSender().getLocalName());
             }
 
             msg.setOntology(ONTOLOGY_NEGOTIATE_RESOURCE);
@@ -124,10 +124,19 @@ public class ResourceAgent extends Agent {
 
         @Override
         protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response) throws FailureException {
-            System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST");
-            myLib.executeSkill(request.getContent());
+            System.out.println(myAgent.getLocalName() + ": Will execute its SKILL");
             ACLMessage msg = request.createReply();
             msg.setPerformative(ACLMessage.INFORM);
+            if(myAgent.getLocalName().equalsIgnoreCase("QualityControlStation1") || myAgent.getLocalName().equalsIgnoreCase("QualityControlStation2")) {
+                if (!myLib.executeSkill(request.getContent()))
+                    msg.setContent("FaultyProduct");
+                else
+                    msg.setContent("FineProduct");
+            }
+            else{
+                myLib.executeSkill(request.getContent());
+                msg.setContent("NotAQualityCheck");
+            }
             available = true;
             return msg;
         }

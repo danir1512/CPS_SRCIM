@@ -10,6 +10,7 @@ import jade.core.behaviours.SequentialBehaviour;
 import jade.core.behaviours.SimpleBehaviour;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAException;
+import jade.domain.FIPANames;
 import jade.lang.acl.ACLMessage;
 import jade.proto.AchieveREInitiator;
 import jade.proto.ContractNetInitiator;
@@ -33,17 +34,17 @@ public class ProductAgent extends Agent {
     // TO DO: Add remaining attributes required for your implementation
     int plan_step;
     String current_pos, next_pos;
-    boolean recovery_tried, quality_check;
-    AID bestResource, ta; //AID -> agent identifier
-    boolean request_agv, transport_done, skill_done, product_in_place;
+    boolean recovery_tried, quality_check, skill_done, product_in_place;
+    AID bestResource; //AID -> agent identifier
 
     /*
-    * plan_step ->
-    * current_pos ->
-    * quality_check ->
+    * plan_step -> used to keep track of the plan step;
+    * current_pos -> has the actual product position;
+    * next_pos -> has the next position to which the product has to go;
+    * quality_check -> used to determine if a product is faulty or not;
     * recovery_tried ->
-    * request_agv ->
-    * skill_done ->
+    * skill_done -> used to verify if each skill has been executed;
+    * product_in_place -> used to determine if the product is in the desired place;
     * */
     @Override
     protected void setup() {
@@ -56,8 +57,8 @@ public class ProductAgent extends Agent {
         this.current_pos = "Source";
         this.quality_check = true;
         this.recovery_tried = false;
-        this.request_agv = false;
         this.skill_done = false;
+        this.product_in_place = false;
 
         // TO DO: Add necessary behaviour/s for the product to control the flow
         // of its own production
@@ -97,7 +98,7 @@ public class ProductAgent extends Agent {
      * - public void action  -------- ???
      */
 
-    private class searchResourceAgentInDF extends SimpleBehaviour {
+    private class searchResourceAgentInDF extends OneShotBehaviour {
 
         public searchResourceAgentInDF(Agent a) {
             super(a);
@@ -105,6 +106,7 @@ public class ProductAgent extends Agent {
 
         @Override
         public void action() {
+            skill_done = false;
             DFAgentDescription[] agents_list = null; //Lista de agentes
 
             try {
@@ -127,10 +129,6 @@ public class ProductAgent extends Agent {
 
         }
 
-        @Override
-        public boolean done() {
-            return true;
-        }
     }
 
     /**
@@ -155,8 +153,7 @@ public class ProductAgent extends Agent {
         protected void handleInform(ACLMessage inform) {
             System.out.println(myAgent.getLocalName() + ": INFORM message received. Next Location: " + inform.getContent());
             next_pos = inform.getContent();
-            //request_agv = !current_pos.equals(next_pos);
-            product_in_place = !current_pos.equals(next_pos);
+            product_in_place = current_pos.equalsIgnoreCase(next_pos);
         }
 
         @Override
@@ -187,22 +184,22 @@ public class ProductAgent extends Agent {
                 } else {
                     System.out.println("(CFP) REFUSE received from: " + msg.getSender().getLocalName());
                 }
-                //Accept best proposal
-                if (accept != null) {
-                    System.out.println("Accepting proposal " + bestProposal + " from responder " + bestProposer.getLocalName());
-                    accept.setPerformative(ACLMessage.ACCEPT_PROPOSAL);
 
-                    bestResource = bestProposer;
-                }
-                else {
-                    try {
-                        Thread.sleep(5000);
-                        myAgent.addBehaviour(new contractNetInitiatorRA(myAgent, this.msg));
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    }
-                }
+            }
 
+            //Accept best proposal
+            if (accept != null) {
+                System.out.println(myAgent.getLocalName() + ": Accepting proposal " + bestProposal + " from responder " + bestProposer.getLocalName());
+                accept.setPerformative(ACLMessage.ACCEPT_PROPOSAL);
+                bestResource = bestProposer;
+            }
+            else {
+                try {
+                    Thread.sleep(5000);
+                    myAgent.addBehaviour(new contractNetInitiatorRA(myAgent, this.msg));
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
             }
         }
     }
@@ -212,26 +209,27 @@ public class ProductAgent extends Agent {
      */
     private class executeRASkill extends SimpleBehaviour {
 
+        private boolean executing_skill = false;
+
         public executeRASkill(Agent a) {
             super(a);
         }
 
         @Override
         public void action() {
-            System.out.println("Executing RA skill!!!");
-            if (product_in_place) {
+            if (product_in_place && !executing_skill) {
                 ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
                 msg.addReceiver(bestResource);
                 msg.setContent(executionPlan.get(plan_step));
                 msg.setOntology(ONTOLOGY_EXECUTE_SKILL);
                 myAgent.addBehaviour(new fipaResponderRA(myAgent, msg));
-                //transport_done = false;
+                executing_skill = true;
             }
         }
 
         @Override
         public boolean done() {
-            return true;
+            return skill_done;
         }
     }
 
@@ -247,7 +245,7 @@ public class ProductAgent extends Agent {
 
         @Override
         protected void handleAgree(ACLMessage agree) {
-            System.out.println("Agent " + myAgent.getLocalName() + ": AGREE msg received from " + agree.getSender().getLocalName());
+            System.out.println(myAgent.getLocalName() + ": AGREE msg received from " + agree.getSender().getLocalName());
         }
 
         @Override
@@ -271,24 +269,25 @@ public class ProductAgent extends Agent {
      */
     private class transport extends SimpleBehaviour {
 
+        private boolean agv_requested = false;
+
         private transport(Agent a) {
             super(a);
         }
 
         @Override
         public void action() {
-            if (!product_in_place) {
+            if (!product_in_place && !agv_requested) {
                 myAgent.addBehaviour(new searchTransportAgentInDF(myAgent));
-                //request_agv = false;
-                product_in_place = true;
-            } /*else {
-                transport_done = true;
-            }*/
+                agv_requested = true;
+            } else if(product_in_place){
+                agv_requested = true;
+            }
         }
 
         @Override
         public boolean done() {
-            return false;
+            return product_in_place;
         }
 
     }
@@ -315,17 +314,17 @@ public class ProductAgent extends Agent {
             }
 
             if (available_agents != null) {
-                System.out.println("TA Agent " + myAgent.getLocalName() + " was found :" + available_agents.length);
-
-                ACLMessage msg = new ACLMessage(ACLMessage.REQUEST); // Creating a request message
-
-                msg.addReceiver(available_agents[0].getName()); // Add the receiver to the request
+                System.out.println("Transport Agent for " + myAgent.getLocalName() + " was found :" + available_agents.length);
+                // Creating a request message
+                ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
+                // Add the receiver to the request
+                msg.addReceiver(available_agents[0].getName());
                 // We send the current, a Token and the next position
                 // The TOKEN allows us to send more than one parameter through the request
                 msg.setContent(current_pos + Constants.TOKEN + next_pos);
                 msg.setOntology(Constants.ONTOLOGY_MOVE); //Set the ontology of the msg
-
-                System.out.println(myAgent.getLocalName() + ": requested " + available_agents[0].getName().getLocalName());
+                msg.setProtocol(FIPANames.InteractionProtocol.FIPA_REQUEST);
+                System.out.println(myAgent.getLocalName() + " requested: " + available_agents[0].getName().getLocalName());
 
                 myAgent.addBehaviour(new fipaResponderTA(myAgent, msg)); //start communication with agent
             } else {
@@ -337,7 +336,7 @@ public class ProductAgent extends Agent {
 
     /**
      * behaviour - fipaResponderTA
-     * - Inicia as comunicação entre os ta agentes (FIPA request initiator ta)
+     * - Inicia as comunicação entre os transport agents (FIPA request initiator ta)
      * - protected void handleAgree
      * - protected handleInform
      * - protected handleRefuse
@@ -350,15 +349,14 @@ public class ProductAgent extends Agent {
 
         @Override
         protected void handleAgree(ACLMessage agree) {
-            System.out.println(myAgent.getLocalName() + ": AGREE message received.");
+            System.out.println(myAgent.getLocalName() + ": AGV AGREE message received.");
         }
 
         @Override
         protected void handleInform(ACLMessage inform) {
-            System.out.println(myAgent.getLocalName() + ": INFORM message received.");
+            System.out.println(myAgent.getLocalName() + ": AGV INFORM message received.");
             current_pos = next_pos;
-            System.out.println(current_pos);
-            transport_done = true;
+            product_in_place = true;
         }
 
         @Override
@@ -366,7 +364,6 @@ public class ProductAgent extends Agent {
 
         }
     }
-
 
     /**
      * behaviour - finishing_step
