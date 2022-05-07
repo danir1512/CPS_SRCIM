@@ -86,7 +86,7 @@ public class ResourceAgent extends Agent {
             }
             else {
                 msg.setPerformative(ACLMessage.REFUSE);
-                System.out.println(myAgent.getLocalName() + "REFUSE sent to " + cfp.getSender().getLocalName());
+                System.out.println(myAgent.getLocalName() + ": REFUSE sent to " + cfp.getSender().getLocalName());
             }
 
             msg.setOntology(ONTOLOGY_NEGOTIATE_RESOURCE);

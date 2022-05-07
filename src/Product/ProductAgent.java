@@ -154,6 +154,7 @@ public class ProductAgent extends Agent {
             System.out.println(myAgent.getLocalName() + ": INFORM message received. Next Location: " + inform.getContent());
             next_pos = inform.getContent();
             product_in_place = current_pos.equalsIgnoreCase(next_pos);
+            System.out.println(current_pos + " " + inform.getContent());
         }
 
         @Override
@@ -411,7 +412,6 @@ public class ProductAgent extends Agent {
                 }
 
                 this.finished = true;
-
             }
         }
 
