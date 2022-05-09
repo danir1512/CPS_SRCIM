@@ -67,7 +67,7 @@ public class ProductAgent extends Agent {
             sb.addSubBehaviour(new searchResourceAgentInDF(this));
             sb.addSubBehaviour(new transport(this));
             sb.addSubBehaviour(new executeRASkill(this));
-            sb.addSubBehaviour(new finishing_step(this));
+            //5sb.addSubBehaviour(new finishing_step(this));
         }
         this.addBehaviour(sb);
     }
@@ -153,7 +153,8 @@ public class ProductAgent extends Agent {
         protected void handleInform(ACLMessage inform) {
             System.out.println(myAgent.getLocalName() + ": INFORM message received. Next Location: " + inform.getContent());
             next_pos = inform.getContent();
-            product_in_place = current_pos.equalsIgnoreCase(next_pos);
+            if(plan_step != 0)
+                product_in_place = current_pos.equalsIgnoreCase(next_pos);
             System.out.println(current_pos + " " + inform.getContent());
         }
 
@@ -218,7 +219,8 @@ public class ProductAgent extends Agent {
 
         @Override
         public void action() {
-            if (product_in_place && !executing_skill) {
+            /*if (product_in_place && !executing_skill) {*/
+            if(!executing_skill){
                 ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
                 msg.addReceiver(bestResource);
                 msg.setContent(executionPlan.get(plan_step));
@@ -257,6 +259,7 @@ public class ProductAgent extends Agent {
                 quality_check = false;
             }
             skill_done = true;
+            plan_step++;
         }
     }
 
@@ -281,6 +284,7 @@ public class ProductAgent extends Agent {
             if (!product_in_place && !agv_requested) {
                 myAgent.addBehaviour(new searchTransportAgentInDF(myAgent));
                 agv_requested = true;
+                //product_in_place = true;
             } else if(product_in_place){
                 agv_requested = true;
             }
@@ -323,9 +327,9 @@ public class ProductAgent extends Agent {
                 // We send the current, a Token and the next position
                 // The TOKEN allows us to send more than one parameter through the request
                 msg.setContent(current_pos + Constants.TOKEN + next_pos);
-                msg.setOntology(Constants.ONTOLOGY_MOVE); //Set the ontology of the msg
-                msg.setProtocol(FIPANames.InteractionProtocol.FIPA_REQUEST);
-                System.out.println(myAgent.getLocalName() + " requested: " + available_agents[0].getName().getLocalName());
+                // Set the ontology of the msg
+                msg.setOntology(Constants.ONTOLOGY_MOVE);
+                System.out.println(myAgent.getLocalName() + ": requested " + available_agents[0].getName().getLocalName());
 
                 myAgent.addBehaviour(new fipaResponderTA(myAgent, msg)); //start communication with agent
             } else {
@@ -356,7 +360,8 @@ public class ProductAgent extends Agent {
         @Override
         protected void handleInform(ACLMessage inform) {
             System.out.println(myAgent.getLocalName() + ": AGV INFORM message received.");
-            current_pos = next_pos;
+            //current_pos = next_pos;
+            current_pos = inform.getContent();
             product_in_place = true;
         }
 
@@ -369,7 +374,7 @@ public class ProductAgent extends Agent {
     /**
      * behaviour - finishing_step
      */
-    private class finishing_step extends SimpleBehaviour {
+    /*private class finishing_step extends SimpleBehaviour {
 
         private boolean finished = false;
 
@@ -419,5 +424,5 @@ public class ProductAgent extends Agent {
         public boolean done() {
             return this.finished;
         }
-    }
+    }*/
 }
