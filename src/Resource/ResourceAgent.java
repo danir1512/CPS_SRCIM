@@ -124,19 +124,10 @@ public class ResourceAgent extends Agent {
 
         @Override
         protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response) throws FailureException {
-            System.out.println(myAgent.getLocalName() + ": Will execute its SKILL");
+            System.out.println(myAgent.getLocalName() + ": Will execute its SKILL.");
+            myLib.executeSkill(request.getContent());
             ACLMessage msg = request.createReply();
             msg.setPerformative(ACLMessage.INFORM);
-            if(myAgent.getLocalName().equalsIgnoreCase("QualityControlStation1") || myAgent.getLocalName().equalsIgnoreCase("QualityControlStation2")) {
-                if (!myLib.executeSkill(request.getContent()))
-                    msg.setContent("FaultyProduct");
-                else
-                    msg.setContent("FineProduct");
-            }
-            else{
-                myLib.executeSkill(request.getContent());
-                msg.setContent("NotAQualityCheck");
-            }
             available = true;
             return msg;
         }

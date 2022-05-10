@@ -1,6 +1,5 @@
 package Product;
 
-import Libraries.SimTransportLibrary;
 import Utilities.Constants;
 import Utilities.DFInteraction;
 import jade.core.AID;
@@ -10,7 +9,6 @@ import jade.core.behaviours.SequentialBehaviour;
 import jade.core.behaviours.SimpleBehaviour;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAException;
-import jade.domain.FIPANames;
 import jade.lang.acl.ACLMessage;
 import jade.proto.AchieveREInitiator;
 import jade.proto.ContractNetInitiator;
@@ -34,15 +32,13 @@ public class ProductAgent extends Agent {
     // TO DO: Add remaining attributes required for your implementation
     int plan_step;
     String current_pos, next_pos;
-    boolean recovery_tried, quality_check, skill_done, product_in_place;
+    boolean agent_negotiation, product_in_place, skill_done;
     AID bestResource; //AID -> agent identifier
 
     /*
     * plan_step -> used to keep track of the plan step;
     * current_pos -> has the actual product position;
     * next_pos -> has the next position to which the product has to go;
-    * quality_check -> used to determine if a product is faulty or not;
-    * recovery_tried ->
     * skill_done -> used to verify if each skill has been executed;
     * product_in_place -> used to determine if the product is in the desired place;
     * */
@@ -55,10 +51,9 @@ public class ProductAgent extends Agent {
 
         this.plan_step = 0;
         this.current_pos = "Source";
-        this.quality_check = true;
-        this.recovery_tried = false;
-        this.skill_done = false;
+        this.agent_negotiation = false;
         this.product_in_place = false;
+        this.skill_done = false;
 
         // TO DO: Add necessary behaviour/s for the product to control the flow
         // of its own production
@@ -67,7 +62,7 @@ public class ProductAgent extends Agent {
             sb.addSubBehaviour(new searchResourceAgentInDF(this));
             sb.addSubBehaviour(new transport(this));
             sb.addSubBehaviour(new executeRASkill(this));
-            //5sb.addSubBehaviour(new finishing_step(this));
+            //sb.addSubBehaviour(new finishing_step(this));
         }
         this.addBehaviour(sb);
     }
@@ -98,7 +93,9 @@ public class ProductAgent extends Agent {
      * - public void action  -------- ???
      */
 
-    private class searchResourceAgentInDF extends OneShotBehaviour {
+    private class searchResourceAgentInDF extends SimpleBehaviour {
+
+        private boolean negotiating = false;
 
         public searchResourceAgentInDF(Agent a) {
             super(a);
@@ -106,27 +103,35 @@ public class ProductAgent extends Agent {
 
         @Override
         public void action() {
-            skill_done = false;
-            DFAgentDescription[] agents_list = null; //Lista de agentes
 
-            try {
-                System.out.println("Looking for available agents...");
-                agents_list = DFInteraction.SearchInDFByName(executionPlan.get(plan_step), myAgent);
-            } catch (FIPAException e) {
-                Logger.getLogger(ProductAgent.class.getName()).log(Level.SEVERE, null, e);
-            }
-
-            if (agents_list != null) {
-                ACLMessage msg = new ACLMessage(ACLMessage.CFP);
-                for (int i = 0; i < agents_list.length; i++) {
-                    msg.addReceiver(agents_list[i].getName());
-                    System.out.println("Msg sent to: " + agents_list[i].getName().getLocalName());
+            if(!negotiating) {
+                skill_done = false; // Reset this variable
+                negotiating = true;
+                DFAgentDescription[] agents_list = null;
+                try {
+                    System.out.println("Looking for available agents...");
+                    agents_list = DFInteraction.SearchInDFByName(executionPlan.get(plan_step), myAgent);
+                    System.out.println(agents_list[0].getName().getLocalName() + plan_step);
+                } catch (FIPAException e) {
+                    Logger.getLogger(ProductAgent.class.getName()).log(Level.SEVERE, null, e);
                 }
-                myAgent.addBehaviour(new contractNetInitiatorRA(myAgent, msg));
-            } else {
-                System.out.println("RIP - Resource not found: " + executionPlan.get(plan_step));
-            }
 
+                if (agents_list != null) {
+                    ACLMessage msg = new ACLMessage(ACLMessage.CFP);
+                    for (DFAgentDescription dfAgentDescription : agents_list) {
+                        msg.addReceiver(dfAgentDescription.getName());
+                        System.out.println("Msg sent to: " + dfAgentDescription.getName().getLocalName());
+                    }
+                    myAgent.addBehaviour(new contractNetInitiatorRA(myAgent, msg));
+                } else {
+                    System.out.println("RIP - Resource not found: " + executionPlan.get(plan_step));
+                }
+            }
+        }
+
+        @Override
+        public boolean done() {
+            return agent_negotiation;
         }
 
     }
@@ -153,9 +158,9 @@ public class ProductAgent extends Agent {
         protected void handleInform(ACLMessage inform) {
             System.out.println(myAgent.getLocalName() + ": INFORM message received. Next Location: " + inform.getContent());
             next_pos = inform.getContent();
-            if(plan_step != 0)
-                product_in_place = current_pos.equalsIgnoreCase(next_pos);
-            System.out.println(current_pos + " " + inform.getContent());
+            //if(plan_step != 0)
+            product_in_place = current_pos.equalsIgnoreCase(next_pos);
+            agent_negotiation = true;
         }
 
         @Override
@@ -219,7 +224,6 @@ public class ProductAgent extends Agent {
 
         @Override
         public void action() {
-            /*if (product_in_place && !executing_skill) {*/
             if(!executing_skill){
                 ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
                 msg.addReceiver(bestResource);
@@ -227,6 +231,7 @@ public class ProductAgent extends Agent {
                 msg.setOntology(ONTOLOGY_EXECUTE_SKILL);
                 myAgent.addBehaviour(new fipaResponderRA(myAgent, msg));
                 executing_skill = true;
+                System.out.println(myAgent.getLocalName() + ": " + bestResource.getLocalName() + " executing skill.");
             }
         }
 
@@ -254,12 +259,9 @@ public class ProductAgent extends Agent {
         @Override
         protected void handleInform(ACLMessage inform) {
             System.out.println(myAgent.getLocalName() + ": Inform message received from " + inform.getSender().getLocalName());
-
-            if (inform.getContent().equalsIgnoreCase("QualityFail")) {
-                quality_check = false;
-            }
             skill_done = true;
             plan_step++;
+            agent_negotiation = false; // To reset this variable
         }
     }
 
@@ -283,9 +285,6 @@ public class ProductAgent extends Agent {
         public void action() {
             if (!product_in_place && !agv_requested) {
                 myAgent.addBehaviour(new searchTransportAgentInDF(myAgent));
-                agv_requested = true;
-                //product_in_place = true;
-            } else if(product_in_place){
                 agv_requested = true;
             }
         }
@@ -329,7 +328,7 @@ public class ProductAgent extends Agent {
                 msg.setContent(current_pos + Constants.TOKEN + next_pos);
                 // Set the ontology of the msg
                 msg.setOntology(Constants.ONTOLOGY_MOVE);
-                System.out.println(myAgent.getLocalName() + ": requested " + available_agents[0].getName().getLocalName());
+                System.out.println(myAgent.getLocalName() + ": Requested " + available_agents[0].getName().getLocalName());
 
                 myAgent.addBehaviour(new fipaResponderTA(myAgent, msg)); //start communication with agent
             } else {
@@ -359,9 +358,8 @@ public class ProductAgent extends Agent {
 
         @Override
         protected void handleInform(ACLMessage inform) {
-            System.out.println(myAgent.getLocalName() + ": AGV INFORM message received.");
-            //current_pos = next_pos;
-            current_pos = inform.getContent();
+            System.out.println(myAgent.getLocalName() + ": AGV INFORM message received." + inform.getContent());
+            current_pos = next_pos;
             product_in_place = true;
         }
 
@@ -370,59 +368,4 @@ public class ProductAgent extends Agent {
 
         }
     }
-
-    /**
-     * behaviour - finishing_step
-     */
-    /*private class finishing_step extends SimpleBehaviour {
-
-        private boolean finished = false;
-
-        public finishing_step(Agent a) {
-            super(a);
-        }
-
-        @Override
-        public void action() {
-            System.out.println("No finishing_step!!!");
-            if (skill_done) {
-                System.out.println(myAgent.getLocalName() + " finished execution number " + plan_step + ": " + executionPlan.get(plan_step));
-                if (executionPlan.get(plan_step).equals("sk_drop")) { //
-                    System.out.println("The manufacture of " + myAgent.getLocalName() + " has been completed with SUCCESS!");
-                }
-                skill_done = false;
-                plan_step++;
-
-                if (!quality_check && !recovery_tried && plan_step == 4) {  //caso não estejamos
-                    System.out.println("Recovery Initiated");
-                    quality_check = true;
-                    recovery_tried = true;
-                    plan_step = 1;
-
-                    SequentialBehaviour sb2 = new SequentialBehaviour();
-                    for (int i = 1; i < executionPlan.size() - 1; i++) {
-                        sb2.addSubBehaviour(new searchResourceAgentInDF(this.myAgent));
-                        sb2.addSubBehaviour(new transport(this.getAgent()));
-                        sb2.addSubBehaviour(new executeRASkill(this.getAgent()));
-                        sb2.addSubBehaviour(new finishing_step(this.getAgent()));
-                    }
-                    addBehaviour(sb2);
-                } else if (plan_step == 4) {
-                    SequentialBehaviour sb3 = new SequentialBehaviour();
-                    sb3.addSubBehaviour(new searchResourceAgentInDF(this.getAgent()));
-                    sb3.addSubBehaviour(new transport(this.getAgent()));
-                    sb3.addSubBehaviour(new executeRASkill(this.getAgent()));
-                    sb3.addSubBehaviour(new finishing_step(this.getAgent()));
-                    addBehaviour(sb3);
-                }
-
-                this.finished = true;
-            }
-        }
-
-        @Override
-        public boolean done() {
-            return this.finished;
-        }
-    }*/
 }

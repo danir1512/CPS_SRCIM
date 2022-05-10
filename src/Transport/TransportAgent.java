@@ -88,7 +88,8 @@ public class TransportAgent extends Agent {
 
         protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response) {
             System.out.println(myAgent.getLocalName() + ": Preparing result of REQUEST. Starting to make MOVE task.");
-            myLib.executeMove(productLocations[0], productLocations[1], request.getConversationId());
+            //System.out.println(productLocations[0] + " " + productLocations[1] + " " + request.getSender().getLocalName());
+            myLib.executeMove(productLocations[0], productLocations[1], request.getSender().getLocalName());
 
             ACLMessage msg = request.createReply();
             msg.setPerformative(ACLMessage.INFORM);
